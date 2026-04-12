@@ -1,13 +1,15 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField] private float horizontalSpeed = 6f;
     [SerializeField] private float initialVerticalSpeed = 4f;
 
     private Rigidbody2D _rb;
     private float _verticalVelocity;
     private bool _switchRequested;
+    private const float InputBufferDuration = 0.08f;
+    private float _inputBufferTime;
 
     private void Awake()
     {
@@ -19,27 +21,38 @@ public class PlayerController : MonoBehaviour
     {
         if (Keyboard.current.spaceKey.wasPressedThisFrame || Mouse.current.leftButton.wasPressedThisFrame)
         {
+            _inputBufferTime = InputBufferDuration;
+            if (_inputBufferTime > 0f)
+            {
+                _inputBufferTime -= Time.deltaTime;
+            }
+
             _switchRequested = true;
         }
     }
 
     private void FixedUpdate()
     {
-        if (_switchRequested)
+
+        if (_inputBufferTime > 0f)
         {
             SwitchGravity();
             _switchRequested = false;
-            _rb.velocity = new Vector2(horizontalSpeed, initialVerticalSpeed);
+            _inputBufferTime = 0f;
         }
+
+        float speed = GameManager.Instance.CurrentSpeed;
+        _rb.velocity = new Vector2(speed, _verticalVelocity);
     }
 
     private void SwitchGravity()
     {
         _verticalVelocity = -_verticalVelocity;
+        PlayerFeedback.Instance.PlaySwitchFeedback();
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        GameManager.Instance.RestartGame();
+        PlayerFeedback.Instance.PlayDeathFeedback();
     }
 }
